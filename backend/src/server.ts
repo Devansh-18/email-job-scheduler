@@ -9,7 +9,7 @@ import './workers/email.worker'; // Import worker so it starts with the server p
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
 
 app.use(cors());
 app.use(express.json());
@@ -23,22 +23,20 @@ app.get('/health', (req: express.Request, res: express.Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Boot-time crash recovery & server launch
-const startServer = async () => {
+// Boot server immediately binding to 0.0.0.0 for Render port detection
+app.listen(PORT, '0.0.0.0', async () => {
+  console.log(`[Server] Express server running on 0.0.0.0:${PORT}`);
+  console.log(
+    `[Worker] BullMQ Worker listening on email-dispatch-queue with concurrency ${
+      process.env.WORKER_CONCURRENCY || 5
+    }`
+  );
+
   try {
-    console.log('[Server] Starting ReachInbox Email Job Scheduler Server...');
-
-    // Run reconciliation on Express startup
+    console.log('[Server] Running boot-time job reconciliation...');
     await ReconciliationService.reconcileOrphanedJobs();
-
-    app.listen(PORT, () => {
-      console.log(`[Server] Express server running on port ${PORT}`);
-      console.log(`[Worker] BullMQ Worker listening on email-dispatch-queue with concurrency ${process.env.WORKER_CONCURRENCY || 5}`);
-    });
   } catch (err) {
-    console.error('[Server] Failed to start server:', err);
-    process.exit(1);
+    console.error('[Server] Error during boot-time reconciliation:', err);
   }
-};
+});
 
-startServer();
