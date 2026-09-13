@@ -81,9 +81,15 @@ async function runAcceptanceTests() {
     // 4. Server Crash & Job Reconciliation Test
     console.log('\n--- 3. Testing Crash Recovery & Job Reconciliation ---');
     const futureTime = new Date(Date.now() + 120000); // 2 minutes from now
+    // Get a user for the test email
+    const testUser = await prisma.user.findFirst({ orderBy: { createdAt: 'asc' } });
+    if (!testUser) {
+      throw new Error('No user found for crash recovery test.');
+    }
     const mockEmail = await prisma.email.create({
       data: {
         senderId: sender.id,
+        userId: testUser.id,
         recipient: 'crash-recovery-test@reachinbox.ai',
         subject: 'Crash Test Email',
         bodyText: 'Testing crash recovery',

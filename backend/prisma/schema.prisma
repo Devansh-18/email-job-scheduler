@@ -24,6 +24,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   senders   Sender[]
+  emails    Email[]
 }
 
 model Sender {
@@ -47,6 +48,8 @@ model Email {
   id                   String      @id @default(uuid())
   senderId             String
   sender               Sender      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  userId               String
+  user                 User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   batchId              String?
   recipient            String
   subject              String

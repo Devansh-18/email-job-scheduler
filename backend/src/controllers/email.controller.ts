@@ -34,7 +34,12 @@ export const scheduleEmailsHandler = async (req: AuthRequest, res: Response) => 
       maxEmailsPerHour,
     } = parseResult.data;
 
-    // Verify sender exists
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Verify sender exists (senders are shared SMTP accounts)
     const sender = await prisma.sender.findUnique({ where: { id: senderId } });
     if (!sender) {
       return res.status(404).json({ error: 'Sender not found' });
@@ -44,12 +49,13 @@ export const scheduleEmailsHandler = async (req: AuthRequest, res: Response) => 
     const scheduledDate = new Date(startTime);
     const delay = Math.max(0, scheduledDate.getTime() - Date.now());
 
-    // Wrap record creation in transaction
+    // Wrap record creation in transaction — each email is owned by the authenticated user
     const createdEmails = await prisma.$transaction(
       recipients.map((recipient) =>
         prisma.email.create({
           data: {
             senderId,
+            userId,
             batchId,
             recipient,
             subject,
@@ -99,8 +105,14 @@ export const scheduleEmailsHandler = async (req: AuthRequest, res: Response) => 
 
 export const getScheduledEmailsHandler = async (req: AuthRequest, res: Response) => {
   try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     const scheduledEmails = await prisma.email.findMany({
       where: {
+        userId,
         status: { in: ['PENDING', 'SCHEDULED', 'PROCESSING', 'RESCHEDULED'] },
       },
       include: {
@@ -120,8 +132,14 @@ export const getScheduledEmailsHandler = async (req: AuthRequest, res: Response)
 
 export const getSentEmailsHandler = async (req: AuthRequest, res: Response) => {
   try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     const sentEmails = await prisma.email.findMany({
       where: {
+        userId,
         status: { in: ['SENT', 'FAILED'] },
       },
       include: {
@@ -141,6 +159,7 @@ export const getSentEmailsHandler = async (req: AuthRequest, res: Response) => {
 
 export const getSendersHandler = async (req: AuthRequest, res: Response) => {
   try {
+    // Senders are shared SMTP accounts — all authenticated users can use any sender
     const senders = await prisma.sender.findMany({
       select: {
         id: true,
