@@ -25,6 +25,12 @@ export class MailerService {
         user: smtp.user,
         pass: smtp.pass,
       },
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000,
+      tls: {
+        rejectUnauthorized: false,
+      },
     });
 
     const info = await transporter.sendMail({

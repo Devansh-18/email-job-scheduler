@@ -150,10 +150,11 @@ export const ComposeModal: React.FC<Props> = ({ isOpen, onClose, senders, onSucc
     if (!subject.trim()) return setError('Subject is required.');
     if (!bodyText.trim()) return setError('Email body is required.');
 
-    const scheduledDate = new Date(startTime);
+    let scheduledDate = new Date(startTime);
     if (isNaN(scheduledDate.getTime()) || scheduledDate.getTime() <= Date.now()) {
-      return setError('Start time must be in the future.');
+      scheduledDate = new Date();
     }
+
 
     try {
       setIsSubmitting(true);
