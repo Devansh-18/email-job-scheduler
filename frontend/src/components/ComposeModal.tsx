@@ -92,10 +92,42 @@ export const ComposeModal: React.FC<Props> = ({ isOpen, onClose, senders, onSucc
     }
   };
 
+  const addRecipient = (emailCandidate: string) => {
+    const candidates = emailCandidate
+      .split(/[\s,\n]+/)
+      .map((s) => s.trim().toLowerCase())
+      .filter((s) => EMAIL_REGEX.test(s));
+
+    if (candidates.length > 0) {
+      setRecipientsList((prev) => Array.from(new Set([...prev, ...candidates])));
+      setRecipientsText('');
+    }
+  };
+
+  const handleRecipientsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',' || e.key === ' ') {
+      e.preventDefault();
+      addRecipient(recipientsText);
+    }
+  };
+
+  const handleRecipientsBlur = () => {
+    if (recipientsText.trim()) {
+      addRecipient(recipientsText);
+    }
+  };
+
   const handleRecipientsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value;
-    setRecipientsText(text);
-    setRecipientsList(parseEmails(text));
+    if (text.includes(',') || text.includes(' ') || text.includes('\n')) {
+      addRecipient(text);
+    } else {
+      setRecipientsText(text);
+    }
+  };
+
+  const removeRecipient = (indexToRemove: number) => {
+    setRecipientsList((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
   const setTomorrowTime = (hour: number) => {
@@ -107,7 +139,14 @@ export const ComposeModal: React.FC<Props> = ({ isOpen, onClose, senders, onSucc
 
   const handleSubmit = async () => {
     if (!selectedSenderId && !senders[0]?.id) return setError('No active sender found.');
-    if (recipientsList.length === 0) return setError('Please provide at least one valid recipient email address.');
+
+    let finalRecipients = [...recipientsList];
+    if (recipientsText.trim()) {
+      const extra = parseEmails(recipientsText);
+      finalRecipients = Array.from(new Set([...finalRecipients, ...extra]));
+    }
+
+    if (finalRecipients.length === 0) return setError('Please provide at least one valid recipient email address.');
     if (!subject.trim()) return setError('Subject is required.');
     if (!bodyText.trim()) return setError('Email body is required.');
 
@@ -121,7 +160,7 @@ export const ComposeModal: React.FC<Props> = ({ isOpen, onClose, senders, onSucc
       setError(null);
       await api.post('/emails/schedule', {
         senderId: selectedSenderId || senders[0].id,
-        recipients: recipientsList,
+        recipients: finalRecipients,
         subject: subject.trim(),
         bodyText: bodyText.trim(),
         startTime: scheduledDate.toISOString(),
@@ -229,22 +268,29 @@ export const ComposeModal: React.FC<Props> = ({ isOpen, onClose, senders, onSucc
           <div className="flex items-start border-b border-gray-100 pb-4 min-h-[40px]">
             <span className="w-32 text-sm font-medium text-gray-600 pt-1.5">To</span>
             <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                {recipientsList.slice(0, 3).map((email, idx) => (
-                  <span key={idx} className="px-3 py-1 rounded-full border border-green-400 bg-green-50/50 text-green-700 text-xs font-medium">
-                    {email}
+              <div className="flex flex-wrap items-center gap-2">
+                {recipientsList.map((email, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full border border-green-400 bg-green-50/50 text-green-700 text-xs font-medium"
+                  >
+                    <span>{email}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeRecipient(idx)}
+                      className="ml-1 text-green-600 hover:text-green-900 focus:outline-none font-bold"
+                    >
+                      &times;
+                    </button>
                   </span>
                 ))}
-                {recipientsList.length > 3 && (
-                  <span className="px-3 py-1 rounded-full border border-green-400 bg-green-50/50 text-green-700 text-xs font-medium">
-                    +{recipientsList.length - 3}
-                  </span>
-                )}
                 <input
                   type="text"
                   value={recipientsText}
                   onChange={handleRecipientsChange}
-                  placeholder={recipientsList.length === 0 ? 'recipient@example.com' : ''}
+                  onKeyDown={handleRecipientsKeyDown}
+                  onBlur={handleRecipientsBlur}
+                  placeholder={recipientsList.length === 0 ? 'Type email address and press Enter...' : ''}
                   className="flex-1 min-w-[200px] text-sm outline-none text-gray-700 py-1"
                 />
               </div>
