@@ -3,8 +3,14 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-export const redisConnection = process.env.REDIS_URL
-  ? new Redis(process.env.REDIS_URL, { maxRetriesPerRequest: null })
+export const connectionString =
+  (process.env.REDIS_URL && process.env.REDIS_URL.trim()) ||
+  (process.env.REDIS_HOST && (process.env.REDIS_HOST.startsWith('redis://') || process.env.REDIS_HOST.startsWith('rediss://'))
+    ? process.env.REDIS_HOST.trim()
+    : undefined);
+
+export const redisConnection = connectionString
+  ? new Redis(connectionString, { maxRetriesPerRequest: null })
   : new Redis({
       host: process.env.REDIS_HOST || '127.0.0.1',
       port: Number(process.env.REDIS_PORT) || 6379,
@@ -13,4 +19,5 @@ export const redisConnection = process.env.REDIS_URL
     });
 
 export const redisOptions: RedisOptions = redisConnection.options;
+
 
