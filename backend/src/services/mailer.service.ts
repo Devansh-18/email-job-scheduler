@@ -17,10 +17,16 @@ export class MailerService {
     bodyText: string,
     bodyHtml?: string | null
   ) {
+    // Cloud providers (Render, Heroku, AWS) block outbound port 587 to Ethereal.
+    // Use port 465 with SSL/TLS (secure: true) for Ethereal and 465 SMTP.
+    const isEthereal = smtp.host.includes('ethereal.email');
+    const targetPort = isEthereal && smtp.port === 587 ? 465 : smtp.port;
+    const isSecure = targetPort === 465;
+
     const transporter = nodemailer.createTransport({
       host: smtp.host,
-      port: smtp.port,
-      secure: smtp.port === 465,
+      port: targetPort,
+      secure: isSecure,
       auth: {
         user: smtp.user,
         pass: smtp.pass,

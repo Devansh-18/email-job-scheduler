@@ -15,7 +15,7 @@ async function seedEtherealSender() {
       where: { email: testAccount.user },
       update: {
         smtpHost: testAccount.smtp.host,
-        smtpPort: testAccount.smtp.port,
+        smtpPort: 465,
         smtpUser: testAccount.user,
         smtpPass: testAccount.pass,
       },
@@ -23,7 +23,7 @@ async function seedEtherealSender() {
         name: 'Ethereal Primary Sender',
         email: testAccount.user,
         smtpHost: testAccount.smtp.host,
-        smtpPort: testAccount.smtp.port,
+        smtpPort: 465,
         smtpUser: testAccount.user,
         smtpPass: testAccount.pass,
         maxEmailsPerHour: 200,
